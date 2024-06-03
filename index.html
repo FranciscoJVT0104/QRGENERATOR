@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="canonical" href="https://fontawesome.com">
+    <link rel="stylesheet" href="https://site-assets.fontawesome.com/releases/v6.5.2/css/all.css">
+    <title>Generador de Código QR</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Generador de Código QR</h2>
+        <form>
+            <div class="input-field">
+                <label for="content">Contenido del código QR</label>
+                <input type="text" id="content" name="content">
+            </div>
+            <div class="input-field">
+                <label for="image">Imagen</label>
+                <input type="file" id="image" name="image">
+                <p id="file-name">Sin archivos seleccionados</p>
+            </div>
+            <button class="button" id="generate-qr"> <i class="fa-solid fa-qrcode"></i> Generar Código QR</button>
+            <button class="button" id="download-qr"><i class="fa-solid fa-download"></i> Descargar Código QR</button>
+        </form>    
+        <div id="qr-code"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
