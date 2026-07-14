@@ -10,6 +10,18 @@ imageInput.addEventListener('change', () => {
     fileNameDisplay.textContent = fileName;
 });
 
+// Obtiene el <canvas> real que dibuja qrcode.js, sin depender de índices frágiles
+function getQrCanvas(qrCode) {
+    // qrcode.js (davidshimjs) guarda el canvas interno en _oDrawing._elCanvas
+    if (qrCode._oDrawing && qrCode._oDrawing._elCanvas) {
+        return qrCode._oDrawing._elCanvas;
+    }
+    // Fallback: buscar cualquier <canvas> dentro del contenedor generado
+    const found = qrCode._el.querySelector('canvas');
+    if (found) return found;
+    throw new Error('No se pudo obtener el canvas del QR generado');
+}
+
 generateQrButton.addEventListener('click', (e) => {
     e.preventDefault();
     const content = contentInput.value;
@@ -20,133 +32,108 @@ generateQrButton.addEventListener('click', (e) => {
         return;
     }
 
-    qrCodeContainer.innerHTML = ''; // Clear any existing QR code
-    
-    // Add loading animation
+    qrCodeContainer.innerHTML = '';
+
     const loadingSpinner = document.createElement('div');
     loadingSpinner.classList.add('loading-spinner');
     qrCodeContainer.appendChild(loadingSpinner);
 
-    setTimeout(() => {
-        qrCodeContainer.innerHTML = ''; // Remove loading animation
-        
+    // Pequeño delay solo para que se aprecie el spinner (opcional, no afecta el dibujo)
+    requestAnimationFrame(() => {
+        const size = 500;
         const canvas = document.createElement('canvas');
-        canvas.width = 500;
-        canvas.height = 500;
+        canvas.width = size;
+        canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // Generate the QR code
-        const qrCode = new QRCode(document.createElement('div'), {
+        // Genera el QR en un contenedor temporal (no necesita estar en el DOM)
+        const qrHolder = document.createElement('div');
+        const qrCode = new QRCode(qrHolder, {
             text: content,
-            width: 300,
-            height: 300,
+            width: size,
+            height: size,
             colorDark: '#000000',
             colorLight: '#ffffff',
             correctLevel: QRCode.CorrectLevel.H
         });
 
-        // Wait for the QR code to be drawn on the canvas
-        setTimeout(() => {
-            const tempCanvas = qrCode._el.childNodes[1];
-            ctx.drawImage(tempCanvas, 0, 0);
+        let qrCanvas;
+        try {
+            qrCanvas = getQrCanvas(qrCode);
+        } catch (err) {
+            qrCodeContainer.innerHTML = '';
+            alert('Error generando el QR: ' + err.message);
+            return;
+        }
 
-            if (imageFile) {
-                const reader = new FileReader();
-                reader.onload = function (event) {
-                    const img = new Image();
-img.crossOrigin = "anonymous";
-                    img.onload = function () {
+        // Dibuja el QR llenando exactamente todo el canvas final (queda cuadrado 1:1)
+        ctx.drawImage(qrCanvas, 0, 0, size, size);
 
-    // Mejor calidad
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
+        const finish = () => {
+            qrCodeContainer.innerHTML = '';
+            qrCodeContainer.appendChild(canvas);
+        };
 
-    // Tamaño del logo (más grande)
-    const logoMax = 110;
+        if (imageFile) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.imageSmoothingQuality = 'high';
 
-    // Mantener proporciones
-    let w = img.width;
-    let h = img.height;
+                    const logoMax = 110;
+                    let w = img.naturalWidth;
+                    let h = img.naturalHeight;
+                    if (w > h) {
+                        h = (h / w) * logoMax;
+                        w = logoMax;
+                    } else {
+                        w = (w / h) * logoMax;
+                        h = logoMax;
+                    }
 
-    if (w > h) {
-        h *= logoMax / w;
-        w = logoMax;
-    } else {
-        w *= logoMax / h;
-        h = logoMax;
-    }
+                    // Centro exacto del canvas final (500x500 => centro en 250,250)
+                    const cx = canvas.width / 2;
+                    const cy = canvas.height / 2;
+                    const x = cx - w / 2;
+                    const y = cy - h / 2;
 
-    const x = (canvas.width - w) / 2;
-    const y = (canvas.height - h) / 2;
+                    const padding = 15;
+                    const boxX = x - padding;
+                    const boxY = y - padding;
+                    const boxW = w + padding * 2;
+                    const boxH = h + padding * 2;
 
-    // Fondo blanco
-    const padding = 15;
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.roundRect(boxX, boxY, boxW, boxH, 12);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.roundRect(boxX, boxY, boxW, boxH, 12);
+                    ctx.strokeStyle = '#DDDDDD';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
 
-    ctx.fillStyle = "#FFFFFF";
-ctx.beginPath();
-ctx.roundRect(
-    x - padding,
-    y - padding,
-    w + padding * 2,
-    h + padding * 2,
-    12
-);
-ctx.fill();
-
-ctx.beginPath();
-ctx.roundRect(
-    x - padding,
-    y - padding,
-    w + padding * 2,
-    h + padding * 2,
-    12
-);
-ctx.strokeStyle = "#DDDDDD";
-ctx.lineWidth = 2;
-ctx.stroke();
-// sombra
-ctx.shadowColor = "rgba(0,0,0,0.18)";
-ctx.shadowBlur = 12;
-ctx.shadowOffsetX = 0;
-ctx.shadowOffsetY = 3;
-
-ctx.fillStyle = "#FFFFFF";
-ctx.beginPath();
-ctx.roundRect(
-    x - padding,
-    y - padding,
-    w + padding * 2,
-    h + padding * 2,
-    12
-);
-ctx.fill();
-
-ctx.shadowColor = "transparent";
-    // Dibujar logo
-    ctx.drawImage(img, x, y, w, h);
-
-    qrCodeContainer.innerHTML = "";
-    qrCodeContainer.appendChild(canvas);
-};
-                    img.src = event.target.result;
+                    ctx.drawImage(img, x, y, w, h);
+                    finish();
                 };
-                reader.readAsDataURL(imageFile);
-            } else {
-                qrCodeContainer.innerHTML = ''; // Clear any existing QR code
-                qrCodeContainer.appendChild(canvas);
-            }
-        }, 500); // Adjust timeout if necessary
-    }, 2000); // Simulated loading time, adjust as needed
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(imageFile);
+        } else {
+            finish();
+        }
+    });
 });
 
 downloadQrButton.addEventListener('click', (e) => {
     e.preventDefault();
-    if (!qrCodeContainer.querySelector('canvas')) {
+    const canvas = qrCodeContainer.querySelector('canvas');
+    if (!canvas) {
         alert('Por favor, genere primero el código QR');
         return;
     }
-
-    const canvas = qrCodeContainer.querySelector('canvas');
     const link = document.createElement('a');
     link.href = canvas.toDataURL('image/png');
     link.download = 'qr-code.png';
