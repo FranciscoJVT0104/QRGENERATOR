@@ -31,8 +31,8 @@ generateQrButton.addEventListener('click', (e) => {
         qrCodeContainer.innerHTML = ''; // Remove loading animation
         
         const canvas = document.createElement('canvas');
-        canvas.width = 300;
-        canvas.height = 300;
+        canvas.width = 500;
+        canvas.height = 500;
         const ctx = canvas.getContext('2d');
 
         // Generate the QR code
@@ -54,14 +54,80 @@ generateQrButton.addEventListener('click', (e) => {
                 const reader = new FileReader();
                 reader.onload = function (event) {
                     const img = new Image();
+img.crossOrigin = "anonymous";
                     img.onload = function () {
-                        const imgSize = 60;
-                        const imgX = (canvas.width - imgSize) / 2;
-                        const imgY = (canvas.height - imgSize) / 2;
-                        ctx.drawImage(img, imgX, imgY, imgSize, imgSize);
-                        qrCodeContainer.innerHTML = ''; // Clear any existing QR code
-                        qrCodeContainer.appendChild(canvas);
-                    };
+
+    // Mejor calidad
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+
+    // Tamaño del logo (más grande)
+    const logoMax = 110;
+
+    // Mantener proporciones
+    let w = img.width;
+    let h = img.height;
+
+    if (w > h) {
+        h *= logoMax / w;
+        w = logoMax;
+    } else {
+        w *= logoMax / h;
+        h = logoMax;
+    }
+
+    const x = (canvas.width - w) / 2;
+    const y = (canvas.height - h) / 2;
+
+    // Fondo blanco
+    const padding = 15;
+
+    ctx.fillStyle = "#FFFFFF";
+ctx.beginPath();
+ctx.roundRect(
+    x - padding,
+    y - padding,
+    w + padding * 2,
+    h + padding * 2,
+    12
+);
+ctx.fill();
+
+ctx.beginPath();
+ctx.roundRect(
+    x - padding,
+    y - padding,
+    w + padding * 2,
+    h + padding * 2,
+    12
+);
+ctx.strokeStyle = "#DDDDDD";
+ctx.lineWidth = 2;
+ctx.stroke();
+// sombra
+ctx.shadowColor = "rgba(0,0,0,0.18)";
+ctx.shadowBlur = 12;
+ctx.shadowOffsetX = 0;
+ctx.shadowOffsetY = 3;
+
+ctx.fillStyle = "#FFFFFF";
+ctx.beginPath();
+ctx.roundRect(
+    x - padding,
+    y - padding,
+    w + padding * 2,
+    h + padding * 2,
+    12
+);
+ctx.fill();
+
+ctx.shadowColor = "transparent";
+    // Dibujar logo
+    ctx.drawImage(img, x, y, w, h);
+
+    qrCodeContainer.innerHTML = "";
+    qrCodeContainer.appendChild(canvas);
+};
                     img.src = event.target.result;
                 };
                 reader.readAsDataURL(imageFile);
